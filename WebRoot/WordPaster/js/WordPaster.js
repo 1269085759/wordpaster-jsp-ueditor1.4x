@@ -367,29 +367,17 @@ function WordPasterManager()
 	    //_this.ImagePaster.Editor = edt;
 
         //非chrome 45才挂载事件，因为chrome 45无法立即判断剪帖板数据
-	    if(!this.chrome45)this.LoadPasteEvent(edt);
+	    //if(!this.chrome45)this.LoadPasteEvent(edt);
 	};
 
     //粘贴命令
-	this.Paste = function (evt)
+	this.Paste = function ()
 	{
 	    if (!this.setuped)
         {
             this.need_setup(); return;
 	    }
-	    if (!this.chrome45 && !_this.edge)
-	    {
-	        evt.cancel();
-            this.app.paste();
-	    }
-	    else if (this.chrome45)
-	    {
-            this.app.paste();
-	    }
-	    else if(this.edge)
-	    {
-            this.app.paste();
-	    }
+	    this.app.paste();
 	};
 
     //单击按钮粘贴
