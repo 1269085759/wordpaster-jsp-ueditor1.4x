@@ -81,24 +81,6 @@ var WordPasteImgType = {local:0/*本地图片*/,network:1/*网络图片*/,word:2
 */
 function WordPasterManager()
 {
-    //pageLoad,pageClose
-    this.event = {
-        on: function (eventName, callback) {
-            if (!this[eventName]) {
-                this[eventName] = [];
-            }
-            this[eventName].push(callback);
-        },
-        emit: function (eventName) {
-            var that = this;
-            var params = arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : [];
-            if (that[eventName]) {
-                Array.prototype.forEach.call(that[eventName], function (arg) {
-                    arg.apply(self, params);
-                });
-            }
-        }
-    };
     var _this = this;
     this.Editor = null;
     this.Fields = {}; //符加信息
@@ -142,14 +124,7 @@ function WordPasterManager()
 	this.chrVer = navigator.appVersion.match(/Chrome\/(\d+)/);
 	if (this.edge) { this.ie = this.firefox = this.chrome = this.chrome45 = false; }
 
-    this.event.on("edgeLoad", function () { _this.app.init(); });
-    this.event.on("pageLoad", function () {
-        _this.setup_check();
-        if (_this.edge) {
-            _this.edgeApp.runChr();
-        }
-        else { _this.app.init(); }
-    });
+
     $(window).bind("beforeunload", function () {
         if (this.edge) _this.edgeApp.close();
     });
@@ -330,7 +305,11 @@ function WordPasterManager()
 	{
 	    $(function ()
         {
-	        _this.event.emit("pageLoad");
+	        _this.setup_check();
+	        if (_this.edge) {
+	            _this.edgeApp.runChr();
+	        }
+	        else { _this.app.init(); }
 	    });
 	};
 
@@ -626,7 +605,7 @@ function WordPasterManager()
 	};
 	this.load_complete_edge = function (json)
 	{
-	    _this.event.emit("edgeLoad");
+		_this.app.init();
     };
     this.load_complete = function (json)
     {
@@ -639,7 +618,7 @@ function WordPasterManager()
             }
         }
         if (needUpdate) this.need_update();
-        else { this.ui.setup.hide(); }
+        else { $('#wrapClose').click();}
     };
     this.recvMessage = function (msg)
 	{
