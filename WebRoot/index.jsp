@@ -12,7 +12,7 @@ String clientCookie = request.getHeader("Cookie");
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-	<title>编辑器完整版实例-1.2.6.0</title>
+	<title>WordPaster-jsp-ueditor-1.2.6.0</title>
 	<script type="text/javascript" src="ueditor.config.js" charset="utf-8"></script>
 	<script type="text/javascript" src="ueditor.all.min.js" charset="utf-8"></script>
 	<link type="text/css" rel="Stylesheet" href="WordPaster/css/WordPaster.css"/>
