@@ -32,7 +32,8 @@ var WordPasterConfig = {
 	, "LogFile"			    : "f:\\log.txt"//日志文件路径
 	, "PasteWordType"	    : ""	//粘贴WORD的图片格式。JPG/PNG/GIF/BMP，推荐使用JPG格式，防止出现大图片。
 	, "PasteImageType"	    : ""	//粘贴文件，剪帖板的图片格式，为空表示本地图片格式。JPG/PNG/GIF/BMP
-	, "JpgQuality"		    : "100"	//JPG质量。0~100
+	, "PasteImgSrc"		    : ""	//shape:优先使用源公式图片，img:使用word自动生成的图片
+    , "JpgQuality"		    : "100"	//JPG质量。0~100
 	, "QueueCount"		    : "5"	//同时上传线程数
 	, "CryptoType"		    : "uuid"//名称计算方式,md5,crc,sha1,uuid，其中uuid为随机名称
 	, "ThumbWidth"		    : "0"	//缩略图宽度。0表示不使用缩略图
@@ -94,6 +95,8 @@ function WordPasterManager()
     this.ui = { setup: null ,single:null};
     this.ffPaster = null;
     this.ieParser = null;
+    this.ffPasterName = "ffPaster" + new Date().getTime();
+    this.iePasterName = "iePaster" + new Date().getTime();
     this.setuped = false;//控件是否安装
     this.natInstalled = false;
     this.filesPanel = null;//jquery obj
@@ -124,7 +127,6 @@ function WordPasterManager()
 	this.chrVer = navigator.appVersion.match(/Chrome\/(\d+)/);
 	if (this.edge) { this.ie = this.firefox = this.chrome = this.chrome45 = false; }
 
-
     $(window).bind("beforeunload", function () {
         if (this.edge) _this.edgeApp.close();
     });
@@ -141,8 +143,7 @@ function WordPasterManager()
 	} //Firefox
 	else if (this.firefox)
     {
-        var ver = browserName.match(/firefox\/(\d+)/);
-        if (parseInt(ver[1]) >= 47)
+        if (!this.app.supportFF())//仍然支持npapi
         {
             this.app.postMessage = this.app.postMessageEdge;
             this.edge = true;
@@ -164,22 +165,13 @@ function WordPasterManager()
 	}
 	else if (this.edge)
     {
-        this.app.postMessage = postMessageEdge;
+        this.app.postMessage = this.app.postMessageEdge;
 	}
-    this.setup_check = function ()
-    {
+    this.setup_tip = function () {
         this.ui.setup.skygqbox();
         var dom = this.ui.setup.html("控件加载中，如果未加载成功请先<a name='w-exe'>安装控件</a>");
         var lnk = dom.find('a[name="w-exe"]');
         lnk.attr("href", this.Config["ExePath"]);
-    }
-	this.need_setup = function ()
-    {
-        var dom = this.ui.setup.html("未检测到控件，请先<a name='aCtl'>安装控件</a>,Chrome 45+需要单独<a name='aCrx'>安装扩展</a>");
-	    var lnk = dom.find('a[name="aCtl"]');
-	    lnk.attr("href", this.Config["ExePath"]);
-	    var crx = dom.find('a[name="aCrx"]');
-	    crx.attr("href", this.Config["NatPath"]);
     };
     this.need_update = function ()
     {
@@ -217,9 +209,9 @@ function WordPasterManager()
 			静态加截控件代码，在复杂WEB系统中或者框架页面中请静态方式加截Word解析组件(Xproer.WordParser)。
 			<object id="objWordParser" classid="clsid:2404399F-F06B-477F-B407-B8A5385D2C5E"	width="1" height="1" ></object>
 		*/
-	    if(!this.chrome45) acx += '<embed name="ffPaster" type="' + this.Config["XpiType"] + '" pluginspage="' + this.Config["XpiPath"] + '" width="1" height="1" id="objWordPaster"/>';
-	    //Word解析组件
-	    acx += ' <object name="ieParser" classid="clsid:' + this.Config["ClsidParser"] + '"';
+        if (!this.chrome45) acx += '<embed name="' + this.ffPasterName + '" type="' + this.Config["XpiType"] + '" pluginspage="' + this.Config["XpiPath"] + '" width="1" height="1"/>';
+        //Word解析组件
+        acx += ' <object name="' + this.iePasterName + '" classid="clsid:' + this.Config["ClsidParser"] + '"';
 	    acx += ' codebase="' + this.Config["CabPath"] + '#version=' + this.Config["Version"] + '"';
 	    acx += ' width="1" height="1" ></object>';
 	    //单张图片上传窗口
@@ -258,12 +250,9 @@ function WordPasterManager()
     //加载控件及HTML元素
 	this.Load = function ()
 	{
-	    var dom             = $(document.body).append(this.GetHtml());
-	    this.ffPaster       = dom.find('embed[name="ffPaster"]').get(0);
-        this.ieParser       = dom.find('object[name="ieParser"]').get(0);
-        this.parter = this.ffPaster;
-        if (this.ie) this.parter = this.ieParser;
-        if (this.ie || this.firefox) this.parter.recvMessage = this.recvMessage;
+        var dom             = $(document.body).append(this.GetHtml());
+        this.ffPaster       = dom.find('embed[name="' + this.ffPasterName + '"]').get(0);
+        this.ieParser       = dom.find('object[name="' + this.iePasterName + '"]').get(0);
 	    this.line           = dom.find('div[name="line"]');
 	    this.fileItem       = dom.find('div[name="fileItem"]');
 	    this.filesPanel     = dom.find('div[name="filesPanel"]');
@@ -281,11 +270,8 @@ function WordPasterManager()
 	this.LoadTo = function (oid)
 	{
 	    var dom             = $("#" + oid).append(this.GetHtml());
-	    this.ffPaster       = dom.find('embed[name="ffPaster"]').get(0);
-	    this.ieParser       = dom.find('object[name="ieParser"]').get(0);
-        this.parter = this.ffPaster;
-        if (this.ie) this.parter = this.ieParser;
-        if (this.ie || this.firefox) this.parter.recvMessage = this.recvMessage;
+        this.ffPaster       = dom.find('embed[name="' + this.ffPasterName + '"]').get(0);
+        this.ieParser       = dom.find('object[name="' + this.iePasterName + '"]').get(0);
 	    this.line           = dom.find('div[name="line"]');
 	    this.fileItem       = dom.find('div[name="fileItem"]');
 	    this.filesPanel     = dom.find('div[name="filesPanel"]');
@@ -305,11 +291,17 @@ function WordPasterManager()
 	{
 	    $(function ()
         {
-	        _this.setup_check();
-	        if (_this.edge) {
-	            _this.edgeApp.runChr();
-	        }
-	        else { _this.app.init(); }
+            if (!_this.edge)
+            {
+                _this.parter = _this.ffPaster;
+                if (_this.ie) _this.parter = _this.ieParser;
+                _this.parter.recvMessage = _this.recvMessage;
+            }
+            _this.setup_tip();
+            if (_this.edge) {
+                _this.edgeApp.runChr();
+            }
+            else { _this.app.init(); }
 	    });
 	};
 
@@ -344,29 +336,34 @@ function WordPasterManager()
 	    _this.Editor = edt;
 	    //_this.WordPaster.Editor = edt;
 	    //_this.ImagePaster.Editor = edt;
-
-        //非chrome 45才挂载事件，因为chrome 45无法立即判断剪帖板数据
-	    //if(!this.chrome45)this.LoadPasteEvent(edt);
 	};
 
     //粘贴命令
-	this.Paste = function ()
+	this.Paste = function (evt)
 	{
-	    if (!this.setuped)
-        {
-            this.need_setup(); return;
-	    }
-	    this.app.paste();
+	    this.PasteManual();
 	};
 
-    //单击按钮粘贴
+    //手动粘贴
 	this.PasteManual = function ()
 	{
 	    if (!this.setuped)
         {
-            this.need_setup(); return;
-        }
-        this.app.paste();
+            this.setup_tip(); return;
+	    }
+	    if (!this.chrome45 && !_this.edge)
+	    {
+
+            this.app.paste();
+	    }
+	    else if (this.chrome45)
+	    {
+            this.app.paste();
+	    }
+	    else if(this.edge)
+	    {
+            this.app.paste();
+	    }
 	};
 
     //上传网络图片
@@ -374,23 +371,6 @@ function WordPasterManager()
 	{
 	    var data = _this.Editor.getContent();
         this.app.pasteAuto(data);
-	};
-
-	/*
-	验证文件名是否存在
-	参数:
-		fileName 包含完整路径的文件名称
-	*/
-	this.Exist = function(fileName)
-	{
-		for (a in this.UploaderList)
-		{
-			if (this.UploaderList[a].LocalFile == fileName)
-			{
-				return true;
-			}
-		}
-		return false;
 	};
 
 	/*
